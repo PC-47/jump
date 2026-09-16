@@ -59,23 +59,28 @@
   }
   @keyframes drift { to { translate: -40px 0; } }
 
-  /* ---------- diving board ---------- */
-  #rig { position: absolute; top: 14%; left: 10%; }
-  #rig .leg {
-    position: absolute; top: 0; width: 9px; height: 112px; border-radius: 2px;
+  /* ---------- ladder + diving board ---------- */
+  #rig { position: absolute; top: 12%; left: 8%; }
+
+  .ladder { position: absolute; top: 0; left: 0; width: 56px; height: 74vh; }
+  .rail {
+    position: absolute; top: 0; width: 9px; height: 100%; border-radius: 2px;
     background: linear-gradient(90deg,
       color-mix(in srgb, var(--metal) 60%, white), var(--metal),
       color-mix(in srgb, var(--metal) 60%, black));
   }
-  #rig .leg.back { left: 44px; height: 128px; }
-  #rig .rung {
-    position: absolute; left: 4px; width: 46px; height: 4px; border-radius: 2px;
-    background: color-mix(in srgb, var(--metal) 55%, white);
+  .rail.r { right: 0; }
+  .rungs {
+    position: absolute; left: 7px; right: 7px; top: 16px; bottom: 0;
+    background: repeating-linear-gradient(180deg,
+      color-mix(in srgb, var(--metal) 55%, white) 0 4px,
+      transparent 4px 26px);
   }
+
   #board {
-    position: absolute; top: 74px; left: 40px;
-    width: 150px; height: 14px; transform-origin: left center;
-    border-radius: 2px 12px 12px 2px;
+    position: absolute; top: 0; left: 52px;
+    width: 104px; height: 11px; transform-origin: left center;
+    border-radius: 2px 9px 9px 2px;
     background:
       repeating-linear-gradient(90deg,
         color-mix(in srgb, var(--board) 88%, white) 0 3px,
@@ -83,11 +88,11 @@
     box-shadow: 0 4px 7px rgba(0,0,0,.28);
   }
   #board::after {
-    content: ""; position: absolute; inset: 0 auto 0 0; width: 16px;
+    content: ""; position: absolute; inset: 0 auto 0 0; width: 13px;
     border-radius: 2px 0 0 2px;
     background: color-mix(in srgb, var(--board) 50%, black);
   }
-  #tip { position: absolute; top: 74px; left: 186px; width: 1px; height: 1px; }
+  #tip { position: absolute; top: 0; left: 150px; width: 1px; height: 1px; }
 
   /* ---------- diver ---------- */
   #diver {
@@ -121,12 +126,11 @@
   <h1>justjump<span>.lol</span></h1>
 
   <div id="rig">
-    <div class="leg"></div>
-    <div class="leg back"></div>
-    <div class="rung" style="top:22px"></div>
-    <div class="rung" style="top:48px"></div>
-    <div class="rung" style="top:74px"></div>
-    <div class="rung" style="top:100px"></div>
+    <div class="ladder">
+      <div class="rail"></div>
+      <div class="rail r"></div>
+      <div class="rungs"></div>
+    </div>
     <div id="board"></div>
     <div id="tip"></div>
   </div>
@@ -156,15 +160,15 @@
   function measure() {
     const s = stage.getBoundingClientRect();
     const t = tip.getBoundingClientRect();
-    startX = t.left - s.left;
-    startY = t.top - s.top - 40;
+    startX = t.left - s.left - 4;
+    startY = t.top - s.top - 44;   // feet resting on the board
     waterY = stage.clientHeight * 0.86 - 22;
   }
   measure();
   addEventListener('resize', measure, { passive: true });
 
   // Diver state
-  let phase = 'crouch', t = 0;
+  let phase = 'stand', t = 0;
   let x = 0, y = 0, vx = 0, vy = 0, rot = 0, spin = 0, alpha = 1;
   let fromX = 0, fromY = 0;
 
@@ -198,6 +202,13 @@
     t += dt;
 
     switch (phase) {
+      case 'stand':                        // appear on the board and pause
+        x = startX; y = startY; rot = 0;
+        alpha = Math.min(t / 0.3, 1);
+        spring(dt, 0);
+        if (t > 1.0) next('crouch');
+        break;
+
       case 'crouch':                       // settle on the board, dip it
         x = startX; y = startY; rot = 0; alpha = 1;
         spring(dt, -6);
@@ -232,7 +243,7 @@
         y = fromY + (startY - fromY) * k;
         rot = 0;
         alpha = 1 - k;
-        if (k === 1) next('crouch');
+        if (k === 1) next('stand');
         break;
       }
     }
