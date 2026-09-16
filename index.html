@@ -13,18 +13,22 @@
     --board: #8a5a2b;
     --metal: #4a4a4a;
     --man: #1c1c1c;
+    --rock: #7c848a;
+    --ketchup: #c8102e;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
       --sky-a: #0b2540; --sky-b: #173a5e;
       --water: #0c3a5c; --water-deep: #06253c;
       --board: #6b4423; --metal: #2a2a2a; --man: #e8e8e8;
+      --rock: #4e565b; --ketchup: #a50d25;
     }
   }
   :root[data-theme="dark"] {
     --sky-a: #0b2540; --sky-b: #173a5e;
     --water: #0c3a5c; --water-deep: #06253c;
     --board: #6b4423; --metal: #2a2a2a; --man: #e8e8e8;
+    --rock: #4e565b; --ketchup: #a50d25;
   }
 
   * { box-sizing: border-box; }
@@ -94,11 +98,27 @@
   }
   #tip { position: absolute; top: 0; left: 150px; width: 1px; height: 1px; }
 
+  /* ---------- rock ---------- */
+  #rock {
+    position: absolute; left: 0; bottom: 0; width: 54%; height: 34%;
+    background: linear-gradient(155deg,
+      color-mix(in srgb, var(--rock) 130%, white) 0%,
+      var(--rock) 45%,
+      color-mix(in srgb, var(--rock) 60%, black) 100%);
+    clip-path: polygon(0% 100%, 3% 52%, 11% 32%, 22% 18%, 34% 10%,
+                       48% 13%, 62% 24%, 76% 42%, 90% 66%, 100% 100%);
+  }
+  #rock::after {   /* highlight along the peak */
+    content: ""; position: absolute; inset: 0;
+    background: linear-gradient(160deg, rgba(255,255,255,.28) 0 18%, transparent 40%);
+  }
+
   /* ---------- diver ---------- */
   #diver {
     position: absolute; top: 0; left: 0; width: 14px; height: 46px;
     will-change: transform, opacity;
   }
+  #squash { position: absolute; inset: 0; transform-origin: 50% 100%; }
   #diver i { position: absolute; background: var(--man); border-radius: 2px; }
   .head { top: 0; left: 0; width: 14px; height: 14px; border-radius: 50% !important; }
   .torso { top: 13px; left: 6px; width: 3px; height: 20px; }
@@ -108,10 +128,16 @@
   .leg-l { top: 31px; left: 5px; width: 3px; height: 15px; rotate: 12deg; }
   .leg-r { top: 31px; left: 8px; width: 3px; height: 15px; rotate: -12deg; }
 
-  /* ---------- splash ---------- */
+  /* ---------- ketchup ---------- */
   .drop {
     position: absolute; border-radius: 50%; pointer-events: none;
     background: color-mix(in srgb, var(--water) 35%, white);
+  }
+  .drop.ketchup { background: var(--ketchup); }
+  .stain {
+    position: absolute; pointer-events: none; background: var(--ketchup);
+    border-radius: 50% 40% 55% 45%;
+    transition: opacity 2.5s linear;
   }
 
   footer {
@@ -136,19 +162,24 @@
   </div>
 
   <div id="diver">
-    <i class="head"></i><i class="arm l"></i><i class="arm r"></i>
-    <i class="torso"></i><i class="leg-l"></i><i class="leg-r"></i>
+    <div id="squash">
+      <i class="head"></i><i class="arm l"></i><i class="arm r"></i>
+      <i class="torso"></i><i class="leg-l"></i><i class="leg-r"></i>
+    </div>
   </div>
 
   <div id="water"></div>
-  <footer>placeholder site. he is fine.</footer>
+  <div id="rock"></div>
+  <footer>placeholder site. that's ketchup. he's fine.</footer>
 </div>
 
 <script>
 (() => {
   const stage = document.getElementById('stage');
   const diver = document.getElementById('diver');
+  const squash = document.getElementById('squash');
   const board = document.getElementById('board');
+  const rock  = document.getElementById('rock');
   const tip   = document.getElementById('tip');
 
   const GRAVITY = 1500;   // px/s²
@@ -156,13 +187,14 @@
   const rand = (a, b) => a + Math.random() * (b - a);
 
   // Measured once, and again on resize.
-  let startX = 0, startY = 0, waterY = 0;
+  let startX = 0, startY = 0, landY = 0;
   function measure() {
     const s = stage.getBoundingClientRect();
     const t = tip.getBoundingClientRect();
+    const r = rock.getBoundingClientRect();
     startX = t.left - s.left - 4;
-    startY = t.top - s.top - 44;   // feet resting on the board
-    waterY = stage.clientHeight * 0.86 - 22;
+    startY = t.top - s.top - 44;                      // feet on the board
+    landY  = (r.top - s.top) + r.height * 0.13 - 44;  // peak of the rock
   }
   measure();
   addEventListener('resize', measure, { passive: true });
@@ -170,6 +202,7 @@
   // Diver state
   let phase = 'stand', t = 0;
   let x = 0, y = 0, vx = 0, vy = 0, rot = 0, spin = 0, alpha = 1;
+  let sx = 1, sy = 1;
   let fromX = 0, fromY = 0;
 
   // Board spring
@@ -179,20 +212,37 @@
     angle += angleVel * dt;
   }
 
-  function splash() {
+  function ketchup() {
     const frag = document.createDocumentFragment();
-    for (let i = 0; i < 10; i++) {
+
+    // airborne spray
+    for (let i = 0; i < 18; i++) {
       const d = document.createElement('div');
-      const size = rand(4, 10);
-      d.className = 'drop';
-      d.style.cssText = `width:${size}px;height:${size}px;left:${x + rand(-14, 14)}px;top:${waterY + 18}px`;
+      const size = rand(4, 13);
+      d.className = 'drop ketchup';
+      d.style.cssText = `width:${size}px;height:${size}px;left:${x + rand(-10, 10)}px;top:${landY + 38}px`;
       frag.appendChild(d);
       d.animate(
-        [{ transform: 'translate(0,0)', opacity: 1 },
-         { transform: `translate(${rand(-70, 70)}px,${rand(-70, -20)}px)`, opacity: 0 }],
-        { duration: rand(400, 750), easing: 'ease-out' }
+        [{ transform: 'translate(0,0) scale(1)', opacity: 1 },
+         { transform: `translate(${rand(-130, 130)}px,${rand(-120, -30)}px) scale(.4)`, opacity: 0 }],
+        { duration: rand(500, 950), easing: 'cubic-bezier(.2,.7,.4,1)' }
       ).onfinish = () => d.remove();
     }
+
+    // stains that soak into the rock, then fade
+    for (let i = 0; i < 7; i++) {
+      const st = document.createElement('div');
+      const w = rand(10, 30);
+      st.className = 'stain';
+      st.style.cssText =
+        `width:${w}px;height:${w * rand(.4, .8)}px;opacity:.85;` +
+        `left:${x + rand(-55, 55)}px;top:${landY + rand(34, 56)}px;` +
+        `rotate:${rand(0, 360)}deg`;
+      frag.appendChild(st);
+      setTimeout(() => { st.style.opacity = '0'; }, 400);
+      setTimeout(() => st.remove(), 3200);
+    }
+
     stage.appendChild(frag);
   }
 
@@ -203,7 +253,7 @@
 
     switch (phase) {
       case 'stand':                        // appear on the board and pause
-        x = startX; y = startY; rot = 0;
+        x = startX; y = startY; rot = 0; sx = 1; sy = 1;
         alpha = Math.min(t / 0.3, 1);
         spring(dt, 0);
         if (t > 1.0) next('crouch');
@@ -223,26 +273,34 @@
         vy += GRAVITY * dt;
         x += vx * dt; y += vy * dt; rot += spin * dt;
         spring(dt, 0);
-        if (y >= waterY) { splash(); alpha = 0; next('under'); }
+        if (y >= landY) {                  // meets rock
+          y = landY; rot = 0;
+          sx = 2.0; sy = 0.18;
+          ketchup();
+          next('splat');
+        }
         break;
 
-      case 'under':                        // briefly submerged
+      case 'splat':                        // flattened on the rock
         spring(dt, 0);
-        if (t > 0.3) { y = waterY; rot = 0; alpha = 1; next('bob'); }
+        y = landY;
+        if (t > 0.9) { fromX = x; fromY = y; next('peel'); }
         break;
 
-      case 'bob':                          // float and wobble
-        y = waterY - 6 + Math.sin(t * 4.5) * 7;
-        rot = Math.sin(t * 3) * 6;
-        if (t > 1.7) { fromX = x; fromY = y; next('climb'); }
+      case 'peel': {                       // unflatten, then fade out
+        const k = Math.min(t / 0.8, 1);
+        sx = 2.0 + (1 - 2.0) * k;
+        sy = 0.18 + (1 - 0.18) * k;
+        alpha = 1 - k;
+        if (k === 1) { sx = sy = 1; next('climb'); }
         break;
+      }
 
-      case 'climb': {                      // fade back up to the board
-        const k = Math.min(t / 0.7, 1);
+      case 'climb': {                      // drift back up to the board
+        const k = Math.min(t / 0.5, 1);
         x = fromX + (startX - fromX) * k;
         y = fromY + (startY - fromY) * k;
-        rot = 0;
-        alpha = 1 - k;
+        rot = 0; alpha = 0;
         if (k === 1) next('stand');
         break;
       }
@@ -256,6 +314,7 @@
     update(dt);
     diver.style.transform = `translate(${x - 7}px, ${y}px) rotate(${rot}deg)`;
     diver.style.opacity = alpha;
+    squash.style.transform = `scale(${sx}, ${sy})`;
     board.style.transform = `rotate(${angle}deg)`;
     requestAnimationFrame(frame);
   }
