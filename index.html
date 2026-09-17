@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -15,6 +16,7 @@
     --man: #1c1c1c;
     --rock: #7c848a;
     --ketchup: #c8102e;
+    --panel: rgba(255,255,255,.72);
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
@@ -22,6 +24,7 @@
       --water: #0c3a5c; --water-deep: #06253c;
       --board: #6b4423; --metal: #2a2a2a; --man: #e8e8e8;
       --rock: #4e565b; --ketchup: #a50d25;
+      --panel: rgba(10,25,40,.72);
     }
   }
   :root[data-theme="dark"] {
@@ -29,6 +32,7 @@
     --water: #0c3a5c; --water-deep: #06253c;
     --board: #6b4423; --metal: #2a2a2a; --man: #e8e8e8;
     --rock: #4e565b; --ketchup: #a50d25;
+    --panel: rgba(10,25,40,.72);
   }
 
   * { box-sizing: border-box; }
@@ -36,16 +40,15 @@
   body {
     background: linear-gradient(var(--sky-a), var(--sky-b));
     font: 16px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    color: var(--man);
   }
-
-  #stage { position: relative; width: 100%; height: 100vh; overflow: hidden; }
+  #stage { position: relative; width: 100%; height: 100dvh; overflow: hidden; }
 
   /* ---------- title ---------- */
   h1 {
-    position: absolute; top: 4vh; left: 50%; translate: -50% 0;
+    position: absolute; top: 3vh; left: 50%; translate: -50% 0;
     margin: 0; z-index: 5; white-space: nowrap; user-select: none;
-    font: 800 clamp(28px, 7vw, 64px)/1 "Comic Sans MS", "Chalkboard SE", cursive, sans-serif;
-    color: var(--man);
+    font: 800 clamp(26px, 7vw, 60px)/1 "Comic Sans MS", "Chalkboard SE", cursive, sans-serif;
   }
   h1 span { color: var(--water); }
 
@@ -58,15 +61,28 @@
     content: ""; position: absolute; top: -5px; left: 0; width: 200%; height: 10px;
     background: repeating-linear-gradient(90deg,
       transparent 0 20px, color-mix(in srgb, var(--water) 55%, white) 20px 40px);
-    opacity: .45;
-    animation: drift 3s linear infinite;
+    opacity: .45; animation: drift 3s linear infinite;
   }
   @keyframes drift { to { translate: -40px 0; } }
 
-  /* ---------- ladder + diving board ---------- */
-  #rig { position: absolute; top: 12%; left: 8%; }
+  /* ---------- rock (size + position set in JS) ---------- */
+  #rock {
+    position: absolute; bottom: 0;
+    background: linear-gradient(155deg,
+      color-mix(in srgb, var(--rock) 130%, white) 0%,
+      var(--rock) 45%,
+      color-mix(in srgb, var(--rock) 60%, black) 100%);
+    clip-path: polygon(0% 100%, 4% 55%, 14% 34%, 30% 14%, 55% 14%,
+                       72% 32%, 88% 60%, 100% 100%);
+  }
+  #rock::after {
+    content: ""; position: absolute; inset: 0;
+    background: linear-gradient(160deg, rgba(255,255,255,.26) 0 18%, transparent 40%);
+  }
 
-  .ladder { position: absolute; top: 0; left: 0; width: 56px; height: 74vh; }
+  /* ---------- ladder + board ---------- */
+  #rig { position: absolute; top: 12%; left: 8%; }
+  .ladder { position: absolute; top: 0; left: 0; width: 56px; height: 74dvh; }
   .rail {
     position: absolute; top: 0; width: 9px; height: 100%; border-radius: 2px;
     background: linear-gradient(90deg,
@@ -77,18 +93,15 @@
   .rungs {
     position: absolute; left: 7px; right: 7px; top: 16px; bottom: 0;
     background: repeating-linear-gradient(180deg,
-      color-mix(in srgb, var(--metal) 55%, white) 0 4px,
-      transparent 4px 26px);
+      color-mix(in srgb, var(--metal) 55%, white) 0 4px, transparent 4px 26px);
   }
-
   #board {
     position: absolute; top: 0; left: 52px;
     width: 104px; height: 11px; transform-origin: left center;
     border-radius: 2px 9px 9px 2px;
-    background:
-      repeating-linear-gradient(90deg,
-        color-mix(in srgb, var(--board) 88%, white) 0 3px,
-        color-mix(in srgb, var(--board) 68%, black) 3px 4px);
+    background: repeating-linear-gradient(90deg,
+      color-mix(in srgb, var(--board) 88%, white) 0 3px,
+      color-mix(in srgb, var(--board) 68%, black) 3px 4px);
     box-shadow: 0 4px 7px rgba(0,0,0,.28);
   }
   #board::after {
@@ -98,19 +111,13 @@
   }
   #tip { position: absolute; top: 0; left: 150px; width: 1px; height: 1px; }
 
-  /* ---------- rock ---------- */
-  #rock {
-    position: absolute; left: 0; bottom: 0; width: 54%; height: 34%;
-    background: linear-gradient(155deg,
-      color-mix(in srgb, var(--rock) 130%, white) 0%,
-      var(--rock) 45%,
-      color-mix(in srgb, var(--rock) 60%, black) 100%);
-    clip-path: polygon(0% 100%, 3% 52%, 11% 32%, 22% 18%, 34% 10%,
-                       48% 13%, 62% 24%, 76% 42%, 90% 66%, 100% 100%);
-  }
-  #rock::after {   /* highlight along the peak */
-    content: ""; position: absolute; inset: 0;
-    background: linear-gradient(160deg, rgba(255,255,255,.28) 0 18%, transparent 40%);
+  /* narrow screens: pull the rig in and shorten the board */
+  @media (max-width: 560px) {
+    #rig { left: 5%; }
+    .ladder { width: 44px; }
+    .rail { width: 7px; }
+    #board { left: 40px; width: 78px; height: 9px; }
+    #tip { left: 116px; }
   }
 
   /* ---------- diver ---------- */
@@ -131,20 +138,37 @@
   /* ---------- ketchup ---------- */
   .drop {
     position: absolute; border-radius: 50%; pointer-events: none;
-    background: color-mix(in srgb, var(--water) 35%, white);
+    background: var(--ketchup);
   }
-  .drop.ketchup { background: var(--ketchup); }
   .stain {
     position: absolute; pointer-events: none; background: var(--ketchup);
-    border-radius: 50% 40% 55% 45%;
-    transition: opacity 2.5s linear;
+    border-radius: 50% 40% 55% 45%; transition: opacity 2.5s linear;
   }
 
-  footer {
-    position: absolute; bottom: 10px; left: 50%; translate: -50% 0;
-    font-size: 12px; color: color-mix(in srgb, var(--man) 55%, transparent);
-    user-select: none;
+  /* ---------- controls ---------- */
+  #panel {
+    position: absolute; left: 50%; bottom: 16px; translate: -50% 0; z-index: 20;
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+    justify-content: center; max-width: 92vw;
+    padding: 12px 18px; border-radius: 14px;
+    background: var(--panel); backdrop-filter: blur(6px);
+    box-shadow: 0 6px 20px rgba(0,0,0,.18);
   }
+  #jump {
+    font: 700 18px/1 inherit; color: #fff; cursor: pointer;
+    padding: 12px 26px; border: 0; border-radius: 10px;
+    background: var(--ketchup);
+    box-shadow: 0 3px 0 color-mix(in srgb, var(--ketchup) 65%, black);
+    transition: translate .06s, box-shadow .06s;
+  }
+  #jump:active:not(:disabled) {
+    translate: 0 3px; box-shadow: 0 0 0 color-mix(in srgb, var(--ketchup) 65%, black);
+  }
+  #jump:disabled { opacity: .45; cursor: default; }
+  label { display: flex; align-items: center; gap: 10px; font-size: 14px; user-select: none; }
+  input[type=range] { width: 130px; accent-color: var(--water); }
+  #speedOut { min-width: 1.4em; font-weight: 700; text-align: center; }
+  #panel small { flex-basis: 100%; text-align: center; font-size: 11px; opacity: .6; }
 </style>
 </head>
 <body>
@@ -153,9 +177,7 @@
 
   <div id="rig">
     <div class="ladder">
-      <div class="rail"></div>
-      <div class="rail r"></div>
-      <div class="rungs"></div>
+      <div class="rail"></div><div class="rail r"></div><div class="rungs"></div>
     </div>
     <div id="board"></div>
     <div id="tip"></div>
@@ -170,56 +192,59 @@
 
   <div id="water"></div>
   <div id="rock"></div>
-  <footer>placeholder site. that's ketchup. he's fine.</footer>
+
+  <div id="panel">
+    <button id="jump">JUMP</button>
+    <label>Fall speed
+      <input id="speed" type="range" min="1" max="10" step="1" value="5">
+      <span id="speedOut">5</span>
+    </label>
+    <small>that's ketchup. he's fine.</small>
+  </div>
 </div>
 
 <script>
 (() => {
-  const stage = document.getElementById('stage');
-  const diver = document.getElementById('diver');
-  const squash = document.getElementById('squash');
-  const board = document.getElementById('board');
-  const rock  = document.getElementById('rock');
-  const tip   = document.getElementById('tip');
+  const $ = (id) => document.getElementById(id);
+  const stage = $('stage'), diver = $('diver'), squash = $('squash');
+  const board = $('board'), rock = $('rock'), tip = $('tip');
+  const btn = $('jump'), speed = $('speed'), speedOut = $('speedOut');
 
-  const GRAVITY = 1500;   // px/s²
-  const LEAP    = -420;   // px/s upward kick
   const rand = (a, b) => a + Math.random() * (b - a);
+  const clamp01 = (v) => v < 0 ? 0 : v > 1 ? 1 : v;
 
-  // Measured once, and again on resize.
-  let startX = 0, startY = 0, landY = 0;
+  // Slider 1-10 -> fall physics. Read once, at the moment JUMP is pressed.
+  const gravityFor = (s) => 300 + (s - 1) * 340;   // 300 .. 3360 px/s²
+  const leapFor    = (s) => -(190 + s * 25);       // -215 .. -440 px/s
+
+  // ---- layout ----------------------------------------------------------
+  let startX = 0, startY = 0, landY = 0, driftSpan = 0;
   function measure() {
     const s = stage.getBoundingClientRect();
+    const W = s.width, H = s.height;
+
     const t = tip.getBoundingClientRect();
-    const r = rock.getBoundingClientRect();
     startX = t.left - s.left - 4;
-    startY = t.top - s.top - 44;                      // feet on the board
-    landY  = (r.top - s.top) + r.height * 0.13 - 44;  // peak of the rock
+    startY = t.top - s.top - 44;          // feet on the board
+    driftSpan = W * 0.095;                // how far he travels sideways
+
+    // Size the rock and slide it so its flat peak sits under the landing spot.
+    const rockW = Math.max(W * 0.62, 280);
+    const rockH = H * 0.34;
+    rock.style.width  = rockW + 'px';
+    rock.style.height = rockH + 'px';
+    rock.style.left   = (startX + driftSpan - rockW * 0.425) + 'px';  // peak = 30%..55%
+    landY = (H - rockH) + rockH * 0.14 - 44;
   }
   measure();
   addEventListener('resize', measure, { passive: true });
 
-  // Diver state
-  let phase = 'stand', t = 0;
-  let x = 0, y = 0, vx = 0, vy = 0, rot = 0, spin = 0, alpha = 1;
-  let sx = 1, sy = 1;
-  let fromX = 0, fromY = 0;
-
-  // Board spring
-  let angle = 0, angleVel = 0;
-  function spring(dt, target) {
-    angleVel += ((target - angle) * 260 - angleVel * 14) * dt;
-    angle += angleVel * dt;
-  }
-
+  // ---- ketchup ---------------------------------------------------------
   function ketchup() {
     const frag = document.createDocumentFragment();
-
-    // airborne spray
-    for (let i = 0; i < 18; i++) {
-      const d = document.createElement('div');
-      const size = rand(4, 13);
-      d.className = 'drop ketchup';
+    for (let i = 0; i < 18; i++) {                       // airborne spray
+      const d = document.createElement('div'), size = rand(4, 13);
+      d.className = 'drop';
       d.style.cssText = `width:${size}px;height:${size}px;left:${x + rand(-10, 10)}px;top:${landY + 38}px`;
       frag.appendChild(d);
       d.animate(
@@ -228,88 +253,90 @@
         { duration: rand(500, 950), easing: 'cubic-bezier(.2,.7,.4,1)' }
       ).onfinish = () => d.remove();
     }
-
-    // stains that soak into the rock, then fade
-    for (let i = 0; i < 7; i++) {
-      const st = document.createElement('div');
-      const w = rand(10, 30);
+    for (let i = 0; i < 7; i++) {                        // stains that soak in
+      const st = document.createElement('div'), w = rand(10, 30);
       st.className = 'stain';
       st.style.cssText =
         `width:${w}px;height:${w * rand(.4, .8)}px;opacity:.85;` +
-        `left:${x + rand(-55, 55)}px;top:${landY + rand(34, 56)}px;` +
-        `rotate:${rand(0, 360)}deg`;
+        `left:${x + rand(-55, 55)}px;top:${landY + rand(34, 56)}px;rotate:${rand(0, 360)}deg`;
       frag.appendChild(st);
       setTimeout(() => { st.style.opacity = '0'; }, 400);
       setTimeout(() => st.remove(), 3200);
     }
-
     stage.appendChild(frag);
   }
 
+  // ---- state -----------------------------------------------------------
+  let phase = 'idle', t = 0, armed = false;
+  let x = 0, y = 0, vx = 0, vy = 0, rot = 0, spin = 0, alpha = 1, sx = 1, sy = 1;
+  let gravity = gravityFor(5);
   const next = (p) => { phase = p; t = 0; };
+
+  let angle = 0, angleVel = 0;                           // board spring
+  function spring(dt, target) {
+    angleVel += ((target - angle) * 260 - angleVel * 14) * dt;
+    angle += angleVel * dt;
+  }
+
+  // Horizontal speed is derived from the fall time, so he lands on the rock's
+  // flat peak no matter what the speed slider is set to.
+  function launch(s) {
+    gravity = gravityFor(s);
+    const v0 = leapFor(s), d = landY - startY;
+    const fall = (-v0 + Math.sqrt(v0 * v0 + 2 * gravity * d)) / gravity;
+    vy = v0;
+    vx = driftSpan / fall;
+    spin = rand(300, 560) * Math.min(1.6, 1 / fall);
+  }
 
   function update(dt) {
     t += dt;
-
     switch (phase) {
-      case 'stand':                        // appear on the board and pause
-        x = startX; y = startY; rot = 0; sx = 1; sy = 1;
-        alpha = Math.min(t / 0.3, 1);
+      case 'idle':                        // standing on the board, waiting
+        x = startX; y = startY; rot = 0; sx = sy = 1;
+        alpha = clamp01(t / 0.3);
         spring(dt, 0);
-        if (t > 1.0) next('crouch');
+        if (armed) { armed = false; next('crouch'); }
         break;
 
-      case 'crouch':                       // settle on the board, dip it
-        x = startX; y = startY; rot = 0; alpha = 1;
+      case 'crouch':                      // dip the board
+        x = startX; y = startY; alpha = 1;
         spring(dt, -6);
-        if (t > 0.35) { 
-          vx = rand(25, 70); vy = LEAP; spin = rand(300, 560);
-          angleVel = 70;                   // board springs back
-          next('flight');
-        }
+        if (t > 0.3) { launch(+speed.value); angleVel = 70; next('flight'); }
         break;
 
-      case 'flight':                       // ballistic fall
-        vy += GRAVITY * dt;
+      case 'flight':                      // ballistic fall
+        vy += gravity * dt;
         x += vx * dt; y += vy * dt; rot += spin * dt;
         spring(dt, 0);
-        if (y >= landY) {                  // meets rock
-          y = landY; rot = 0;
-          sx = 2.0; sy = 0.18;
+        if (y >= landY) {
+          y = landY; rot = 0; sx = 2.0; sy = 0.18;
           ketchup();
           next('splat');
         }
         break;
 
-      case 'splat':                        // flattened on the rock
-        spring(dt, 0);
-        y = landY;
-        if (t > 0.9) { fromX = x; fromY = y; next('peel'); }
+      case 'splat':                       // flattened on the rock
+        y = landY; spring(dt, 0);
+        if (t > 1.0) next('clear');
         break;
 
-      case 'peel': {                       // unflatten, then fade out
-        const k = Math.min(t / 0.8, 1);
+      case 'clear': {                     // unflatten and fade out
+        const k = clamp01(t / 0.6);
         sx = 2.0 + (1 - 2.0) * k;
         sy = 0.18 + (1 - 0.18) * k;
         alpha = 1 - k;
-        if (k === 1) { sx = sy = 1; next('climb'); }
-        break;
-      }
-
-      case 'climb': {                      // drift back up to the board
-        const k = Math.min(t / 0.5, 1);
-        x = fromX + (startX - fromX) * k;
-        y = fromY + (startY - fromY) * k;
-        rot = 0; alpha = 0;
-        if (k === 1) next('stand');
+        if (k === 1) next('idle');        // reappears at the top
         break;
       }
     }
+    btn.disabled = phase !== 'idle';
   }
 
+  // ---- loop ------------------------------------------------------------
   let last = performance.now();
   function frame(now) {
-    const dt = Math.min((now - last) / 1000, 0.05);  // clamp after tab switches
+    const dt = Math.min((now - last) / 1000, 0.05);      // clamp after tab switches
     last = now;
     update(dt);
     diver.style.transform = `translate(${x - 7}px, ${y}px) rotate(${rot}deg)`;
@@ -319,6 +346,10 @@
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
+
+  // ---- controls --------------------------------------------------------
+  btn.addEventListener('click', () => { if (phase === 'idle') armed = true; });
+  speed.addEventListener('input', () => { speedOut.textContent = speed.value; });
 })();
 </script>
 </body>
